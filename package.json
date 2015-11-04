@@ -1,0 +1,8 @@
+{
+  "name": "xero-webdriver",
+  "version": "0.0.1",
+  "private": true,
+  "dependencies": {
+    "selenium-webdriver": "^2.48.2"
+  }
+}
