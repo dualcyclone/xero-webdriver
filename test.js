@@ -18,8 +18,8 @@ function timeout(ms) {
 	return d.promise;
 }
 
-test.describe('My Website', function () {
-	this.timeout(15000);
+test.describe('Xero Receipt Import', function () {
+	this.timeout(60000);
 
 	var driver,
 		data;
@@ -45,50 +45,61 @@ test.describe('My Website', function () {
 		driver.quit();
 	});
 
-	test.it('Contact form should return success', function () {
-		driver.get('https://go.xero.com/Expenses/EditReceipt.aspx');
+	test.describe('Will import all of the receipts', function() {
+		for (var i = 0, ii = 3; i < ii; i += 1) {
+			test.it('Importing receipt "' + data[i]['date'] + ' - ' + data[i]['Receipt from'] + '"', function () {
+				driver.get('https://go.xero.com/Expenses/EditReceipt.aspx');
 
-		driver.findElement(webdriver.By.name('userName')).sendKeys(credentials.username);
-		driver.findElement(webdriver.By.name('password')).sendKeys(credentials.password);
-		driver.findElement(webdriver.By.id('submitButton')).click();
+				driver.findElement(webdriver.By.name('userName')).sendKeys(credentials.username);
+				driver.findElement(webdriver.By.name('password')).sendKeys(credentials.password);
+				driver.findElement(webdriver.By.id('submitButton')).click();
 
-		driver.wait(function () {
-			var paidToContact = driver.findElement(webdriver.By.id('PaidToContactID')).getAttribute('value'),
-				paidToContactVal = paidToContact.getAttribute("value");
+				driver.wait(function () {
+					return driver.isElementPresent(webdriver.By.linkText('Save & Add Another Receipt'));
+				}, 60000);
 
-			console.log('************************************* VAL!', paidToContactVal);
+				driver.findElement(webdriver.By.name('CleanInvoiceID')).getAttribute('value').then(function (invoice) {
+					var paidTo = driver.findElement(webdriver.By.name('PaidToName_' + invoice + '_value')),
+						datePaid = driver.findElement(webdriver.By.name('InvoiceDate_' + invoice)),
+						ref = driver.findElement(webdriver.By.name('InvoiceNumber_' + invoice));
 
-		}, 3000);
+					paidTo.sendKeys(data[i]['Receipt from']);
+					driver.sleep(3000);
 
-		driver.findElement(webdriver.By.name('CleanInvoiceID')).getAttribute('value').then(function (invoice) {
+					datePaid.click();
+					datePaid.sendKeys(data[i]['Date']);
+					ref.sendKeys(data[i]['Reference']);
 
-			driver.findElement(webdriver.By.name('PaidToName_' + invoice + '_value')).sendKeys(data[0]['Receipt From']);
+					driver.findElement(webdriver.By.className('xoLineItemIDs')).getAttribute('value').then(function (lineitem) {
+						var desc = driver.findElement(webdriver.By.name('Description_' + lineitem)),
+							quan = driver.findElement(webdriver.By.name('Quantity_' + lineitem)),
+							unit = driver.findElement(webdriver.By.name('UnitAmount_' + lineitem)),
+							acco = driver.findElement(webdriver.By.name('Account_' + lineitem + '_value')),
+							tax = driver.findElement(webdriver.By.name('GSTCode_' + lineitem + '_value'));
 
-			driver.wait(function () {
-				return driver.findElement(webdriver.By.className('autocompleter-contacts')).isDisplayed();
-			}, 3000);
+						desc.clear();
+						desc.sendKeys(data[i]['Description']);
 
-			driver.findElement(webdriver.By.name('InvoiceDate_' + invoice)).click();
+						quan.clear();
+						quan.sendKeys('' + data[i]['Quantity']);
 
-			driver.findElement(webdriver.By.name('InvoiceDate_' + invoice)).sendKeys(data[0]['Date']);
-			driver.findElement(webdriver.By.name('InvoiceNumber_' + invoice)).sendKeys(data[0]['Reference']);
+						unit.clear();
+						unit.sendKeys('' + data[i]['Unit Price']);
 
-			driver.findElement(webdriver.By.className('xoLineItemIDs')).getAttribute('value').then(function (lineitem) {
-				driver.findElement(webdriver.By.name('Description_' + lineitem)).sendKeys(data[0]['Description']);
-				driver.findElement(webdriver.By.name('Quantity_' + lineitem)).sendKeys(webdriver.Key.CONTROL, "a", data[0]['Quantity']);
-				driver.findElement(webdriver.By.name('UnitAmount_' + lineitem)).sendKeys(webdriver.Key.CONTROL, "a", data[0]['Unit Price']);
+						acco.clear();
+						acco.sendKeys('' + data[i]['Account']);
+						driver.sleep(2000);
 
-				driver.findElement(webdriver.By.name('Account_' + lineitem + '_value')).sendKeys(webdriver.Key.CONTROL, "a", data[0]['Account']);
+						tax.clear();
+						tax.sendKeys('' + data[i]['Tax Rate']);
+						driver.sleep(2000);
 
-				driver.findElement(webdriver.By.name('GSTCode_' + lineitem + '_value')).sendKeys(webdriver.Key.CONTROL, "a", data[0]['Tax Rate']);
-
-				timeout(30000).then(function(){console.log('***************************** DONE!')});
-
-				//driver.findElement(webdriver.By.linkText('Save & Add Another Receipt')).click();
-				//driver.wait(function(){
-				//	return driver.findElement(webdriver.By.id('PaidToContactID')).getAttribute('value') === '';
-				//}, 5000);
+						desc.click();
+						driver.findElement(webdriver.By.linkText('Save & Add Another Receipt')).click();
+						driver.sleep(6000);
+					});
+				});
 			});
-		});
+		}
 	});
 });
